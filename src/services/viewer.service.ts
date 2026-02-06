@@ -35,7 +35,7 @@ export interface ViewerAnalytics {
 /**
  * Detect device type dari user agent
  */
-export function detectDevice(userAgent: string): string {
+export function detectDevice(userAgent: string): "mobile" | "tablet" | "desktop" {
   const ua = userAgent.toLowerCase();
   
   if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
@@ -128,8 +128,8 @@ export async function getViewerAnalytics(
   // Views by device
   const viewsByDevice = viewers.reduce(
     (acc, viewer) => {
-      const device = viewer.device || 'desktop';
-      acc[device] = (acc[device] || 0) + 1;
+      const device = (viewer.device || 'desktop') as keyof ViewerAnalytics['viewsByDevice'];
+      acc[device] += 1;
       return acc;
     },
     { mobile: 0, tablet: 0, desktop: 0 }
