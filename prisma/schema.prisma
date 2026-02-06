@@ -1,0 +1,288 @@
+// Prisma Schema untuk Sistem Undangan Digital
+// Database: PostgreSQL
+// ORM: Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USER & AUTH ====================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  phone         String?
+  role          UserRole @default(USER)
+  
+  // Relations
+  invitations   Invitation[]
+  
+  // Timestamps
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ==================== UNDANGAN ====================
+
+model Invitation {
+  id                String   @id @default(cuid())
+  slug              String   @unique // URL-friendly unique identifier
+  
+  // Event Details
+  eventName         String   @map("event_name")
+  groomName         String?  @map("groom_name")
+  brideName         String?  @map("bride_name")
+  hostName          String?  @map("host_name") // Untuk event non-wedding
+  
+  eventDate         DateTime @map("event_date")
+  eventTime         String   @map("event_time") // "14:00 WIB"
+  
+  // Location
+  venueName         String   @map("venue_name")
+  venueAddress      String   @map("venue_address") @db.Text
+  googleMapsUrl     String?  @map("google_maps_url")
+  latitude          Float?
+  longitude         Float?
+  
+  // Content
+  description       String?  @db.Text
+  dresscode         String?
+  
+  // Gallery
+  coverImage        String?  @map("cover_image") // URL ke Cloudinary
+  galleryImages     String[] @default([]) @map("gallery_images") // Array URLs
+  
+  // Settings
+  isPublished       Boolean  @default(false) @map("is_published")
+  allowRsvp         Boolean  @default(true) @map("allow_rsvp")
+  maxGuests         Int?     @map("max_guests")
+  
+  // Theme & Customization
+  theme             String   @default("classic") // classic, modern, rustic, etc
+  primaryColor      String?  @map("primary_color") // #HEXCOLOR
+  secondaryColor    String?  @map("secondary_color")
+  
+  // Owner
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  guests            Guest[]
+  viewers           Viewer[]
+  paymentMethods    PaymentMethod[]
+  musicTracks       MusicTrack[]
+  
+  // Timestamps
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  @@index([userId])
+  @@index([slug])
+  @@map("invitations")
+}
+
+// ==================== TAMU ====================
+
+model Guest {
+  id              String        @id @default(cuid())
+  
+  // Guest Info
+  name            String
+  phone           String?
+  email           String?
+  category        GuestCategory @default(GENERAL) // VIP, Family, Friend, etc
+  
+  // RSVP
+  rsvpStatus      RsvpStatus    @default(PENDING) @map("rsvp_status")
+  attendanceCount Int           @default(1) @map("attendance_count") // Jumlah orang yang hadir
+  message         String?       @db.Text // Ucapan dari tamu
+  rsvpAt          DateTime?     @map("rsvp_at")
+  
+  // Relation
+  invitationId    String        @map("invitation_id")
+  invitation      Invitation    @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  
+  @@index([invitationId])
+  @@map("guests")
+}
+
+enum GuestCategory {
+  VIP
+  FAMILY
+  FRIEND
+  COLLEAGUE
+  GENERAL
+}
+
+enum RsvpStatus {
+  PENDING
+  ATTENDING
+  NOT_ATTENDING
+  MAYBE
+}
+
+// ==================== VIEWER TRACKING ====================
+
+model Viewer {
+  id              String   @id @default(cuid())
+  
+  // Tracking Data
+  invitationId    String   @map("invitation_id")
+  invitation      Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  
+  // Device & Browser Info
+  userAgent       String?  @map("user_agent")
+  device          String?  // mobile, tablet, desktop
+  browser         String?
+  os              String?
+  
+  // Location (IP-based, optional)
+  ipAddress       String?  @map("ip_address")
+  country         String?
+  city            String?
+  
+  // Session
+  sessionId       String?  @map("session_id")
+  referrer        String?  // Dari mana link diklik
+  
+  // Timestamps
+  viewedAt        DateTime @default(now()) @map("viewed_at")
+  
+  @@index([invitationId])
+  @@index([viewedAt])
+  @@map("viewers")
+}
+
+// ==================== METODE PEMBAYARAN ====================
+
+model PaymentMethod {
+  id              String        @id @default(cuid())
+  
+  // Payment Info
+  type            PaymentType
+  bankName        String?       @map("bank_name") // BCA, Mandiri, BNI, etc
+  accountName     String        @map("account_name")
+  accountNumber   String        @map("account_number")
+  
+  // E-Wallet specific
+  ewalletType     String?       @map("ewallet_type") // OVO, GoPay, DANA, ShopeePay
+  
+  // QR Code
+  qrCodeImage     String?       @map("qr_code_image") // URL ke QR Code
+  
+  // Settings
+  isActive        Boolean       @default(true) @map("is_active")
+  displayOrder    Int           @default(0) @map("display_order")
+  
+  // Relation
+  invitationId    String        @map("invitation_id")
+  invitation      Invitation    @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  
+  @@index([invitationId])
+  @@map("payment_methods")
+}
+
+enum PaymentType {
+  BANK_TRANSFER
+  E_WALLET
+}
+
+// ==================== MUSIK YOUTUBE ====================
+
+model MusicTrack {
+  id              String   @id @default(cuid())
+  
+  // YouTube Info
+  youtubeUrl      String   @map("youtube_url") // Full URL atau Video ID
+  youtubeId       String   @map("youtube_id") // Extracted Video ID
+  title           String
+  artist          String?
+  thumbnail       String?  // YouTube thumbnail
+  
+  // Settings
+  isDefault       Boolean  @default(false) @map("is_default")
+  isActive        Boolean  @default(true) @map("is_active")
+  displayOrder    Int      @default(0) @map("display_order")
+  
+  // Playback
+  startTime       Int?     @default(0) @map("start_time") // Mulai dari detik ke-
+  autoplay        Boolean  @default(true)
+  loop            Boolean  @default(true)
+  
+  // Relation
+  invitationId    String   @map("invitation_id")
+  invitation      Invitation @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  @@index([invitationId])
+  @@map("music_tracks")
+}
+
+// ==================== CAPTION TEMPLATES ====================
+
+model CaptionTemplate {
+  id              String   @id @default(cuid())
+  
+  // Template Info
+  name            String   // "WhatsApp Template", "Instagram Template"
+  platform        Platform
+  
+  // Template Content (support placeholders)
+  // Available placeholders:
+  // {guest_name}, {event_name}, {event_date}, {event_time}, 
+  // {venue_name}, {groom_name}, {bride_name}, {invitation_link}
+  content         String   @db.Text
+  
+  // Example: 
+  // "Kepada Yth. Bapak/Ibu/Saudara/i {guest_name}\n\n
+  // Tanpa mengurangi rasa hormat, perkenankan kami mengundang 
+  // Bapak/Ibu/Saudara/i untuk menghadiri acara pernikahan:\n\n
+  // {groom_name} & {bride_name}\n\n
+  // 📅 {event_date}\n⏰ {event_time}\n📍 {venue_name}\n\n
+  // Untuk info lengkap, silakan buka undangan digital kami:\n
+  // {invitation_link}\n\nMerupakan suatu kehormatan bagi kami 
+  // apabila Bapak/Ibu/Saudara/i berkenan hadir."
+  
+  // Settings
+  isDefault       Boolean  @default(false) @map("is_default")
+  isActive        Boolean  @default(true) @map("is_active")
+  
+  // Timestamps
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  @@map("caption_templates")
+}
+
+enum Platform {
+  WHATSAPP
+  INSTAGRAM
+  SMS
+  EMAIL
+  CUSTOM
+}
