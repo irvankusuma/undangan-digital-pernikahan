@@ -2,7 +2,7 @@
 // Authentication & Authorization Utilities
 
 import { compare, hash } from 'bcryptjs';
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT, jwtVerify, type JWTPayload as JoseJWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -16,7 +16,7 @@ const COOKIE_NAME = 'auth-token';
 
 // ==================== TYPES ====================
 
-export interface JWTPayload {
+export interface JWTPayload extends JoseJWTPayload {
   userId: string;
   email: string;
   name: string;

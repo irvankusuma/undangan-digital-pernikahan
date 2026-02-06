@@ -96,6 +96,16 @@ Atas perhatian dan kehadirannya, kami ucapkan terima kasih.
 
 Hormat kami,
 Keluarga Besar {groom_name} & {bride_name}`,
+
+  CUSTOM: `Hai {guest_name},
+
+Kami mengundang Anda untuk hadir di acara {event_name}.
+
+📅 {event_date}
+⏰ {event_time}
+📍 {venue_name}
+
+Detail lengkap: {invitation_link}`,
 };
 
 // ==================== CRUD OPERATIONS ====================

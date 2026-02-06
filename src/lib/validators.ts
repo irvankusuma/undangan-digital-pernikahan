@@ -65,7 +65,7 @@ export const rsvpSchema = z.object({
 
 // ==================== PAYMENT METHOD VALIDATORS ====================
 
-export const createPaymentMethodSchema = z.object({
+const paymentMethodBaseSchema = z.object({
   invitationId: z.string().cuid('ID undangan tidak valid'),
   type: z.enum(['BANK_TRANSFER', 'E_WALLET']),
   bankName: z.string().optional(),
@@ -75,7 +75,9 @@ export const createPaymentMethodSchema = z.object({
   qrCodeImage: z.string().url('URL QR Code tidak valid').optional(),
   isActive: z.boolean().default(true),
   displayOrder: z.number().int().default(0),
-}).refine(
+});
+
+export const createPaymentMethodSchema = paymentMethodBaseSchema.refine(
   (data) => {
     if (data.type === 'BANK_TRANSFER') {
       return !!data.bankName;
@@ -90,7 +92,7 @@ export const createPaymentMethodSchema = z.object({
   }
 );
 
-export const updatePaymentMethodSchema = createPaymentMethodSchema.partial().omit({ invitationId: true });
+export const updatePaymentMethodSchema = paymentMethodBaseSchema.partial().omit({ invitationId: true });
 
 // ==================== MUSIC TRACK VALIDATORS ====================
 
@@ -117,7 +119,7 @@ export const extractYouTubeId = (url: string): string | null => {
   return null;
 };
 
-export const createMusicTrackSchema = z.object({
+const musicTrackBaseSchema = z.object({
   invitationId: z.string().cuid('ID undangan tidak valid'),
   youtubeUrl: z.string().min(1, 'URL YouTube wajib diisi').refine(
     (url) => extractYouTubeId(url) !== null,
@@ -131,12 +133,14 @@ export const createMusicTrackSchema = z.object({
   startTime: z.number().int().min(0).default(0),
   autoplay: z.boolean().default(true),
   loop: z.boolean().default(true),
-}).transform((data) => ({
+});
+
+export const createMusicTrackSchema = musicTrackBaseSchema.transform((data) => ({
   ...data,
   youtubeId: extractYouTubeId(data.youtubeUrl)!,
 }));
 
-export const updateMusicTrackSchema = createMusicTrackSchema.partial().omit({ invitationId: true });
+export const updateMusicTrackSchema = musicTrackBaseSchema.partial().omit({ invitationId: true });
 
 // ==================== CAPTION TEMPLATE VALIDATORS ====================
 
