@@ -5,20 +5,18 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
-        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'img.youtube.com',
-        pathname: '/**',
       },
     ],
   },
-  // Enable React strict mode for better development experience
-  reactStrictMode: true,
-  
-  // Optimize builds
-  swcMinify: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
 };
 
 module.exports = nextConfig;
